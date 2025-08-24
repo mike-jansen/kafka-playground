@@ -1,6 +1,8 @@
 from confluent_kafka import Producer
+import requests
+import json
 
-conf = {'bootstrap.servers': 'localhost:9092'}  # specify which kafka broker to connect to
+conf = {'bootstrap.servers': 'localhost:9092'}  # connect to kafka broker
 producer = Producer(conf)
 
 def delivery_report(err, msg):
@@ -9,8 +11,18 @@ def delivery_report(err, msg):
     else:
         print(f'Message delivered to {msg.topic()} [{msg.partition()}]')
 
-# produce 5 messages to 'test-topic'
-for i in range(5):
-    producer.produce('test-topic', key=str(i), value=f'Message {i}', callback=delivery_report)
+SYMBOL = 'BTCUSDT'  # bitcoin
+URL = f'https://api.binance.us/api/v3/ticker/price?symbol={SYMBOL}'  # binance us public api endpoint
 
+response = requests.get(URL)
+print(response.status_code, response.text)
+data = response.json()
+
+price = data['price']
+message = json.dumps({
+    'symbol': SYMBOL,
+    'price': price
+})
+
+producer.produce('test-topic', key='binance', value=message, callback=delivery_report)
 producer.flush()
