@@ -1,0 +1,36 @@
+# version: '3.8'  # docker version
+services:  # services to run, each service is is a container
+  zookeeper:   # Confluent Zookeeper Docker image, used by Kafka to manage things like broker coordination
+    image: confluentinc/cp-zookeeper:7.5.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181  # port that is used by clients to connect to zookeeper
+    ports:
+      - "2181:2181"  # maps host port 2181 to container port 2181
+
+  kafka:  # message streaming platform, stores and streams data/events. In this case, single broker setup
+    image: confluentinc/cp-kafka:7.5.0  # again using Confluent's Kafka image
+    depends_on:
+      - zookeeper  # making sure zookeeper starts before kafka
+    environment:
+      KAFKA_BROKER_ID: 1  # unique ID for this Kafka broker
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181  # tells Kafka how to connect to zookeeper
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092  # address that clients use to connect to kafka
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1  # replication factor for the internal offsets topic?
+    ports:
+      - "9092:9092"  # maps host port 9092 to container port 9092
+
+  schema-registry:  # defining schema, basically structure of the data 
+    image: confluentinc/cp-schema-registry:7.5.0  
+    depends_on:
+      - kafka  # start only after kafka is up
+    environment:
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092  # tells schema registry which kafka broker to use
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry  # needed so that schema registry can identify itself...?
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081  # schema registry will listen on port 8081 on all interfaces inside the container
+    ports:
+      - "8081:8081"  # maps host port 8081 to container port 8081
+
+# overall flow:
+# 1. zookeeper starts first
+# 2. kafka starts next, connects to zookeeper
+# 3. schema-registry starts last, connects to kafka
