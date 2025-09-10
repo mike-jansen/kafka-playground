@@ -3,20 +3,15 @@ import json
 import time
 
 conf = {
-    'bootstrap.servers': 'localhost:9092',# specify which kafka broker to connect to
-    'group.id': 'my-group',  # consumers in same group share the same partition (single)
+    'bootstrap.servers': 'localhost:9092',  # specify which kafka broker to connect to
+    'group.id': 'sensor_group',  # consumers in same group share the same partition (single)
     'auto.offset.reset': 'earliest'  # read from beginning if not offset is given
 }
+topics = ['temperature', 'humidity', 'pressure']
 
 consumer = Consumer(conf)
-consumer.subscribe(['crypto-tickers'])  # producer produces to topic
-
-message_count = 0
-start_time = time.time()
-
-
-def report_price(data):
-    print(f"Received message: {data['symbol']} - Price: {data['price']}")
+consumer.subscribe(topics)
+print("Consumer is running, subscribed to topics:", topics)
 
 try:
     while True:
@@ -24,25 +19,11 @@ try:
         if msg is None:
             continue
         if msg.error():
-            print('Error:', msg.error())
+            print('Consumer error:', msg.error())
             continue
-
-        data = json.loads(msg.value().decode('utf-8'))
-        message_count += 1
-
-
-        if data['symbol'] == 'BTCUSDT' or data['symbol'] == 'ETHUSDT' or data['symbol'] == 'XRPUSDT':
-            report_price(data)
-
-        # if message_count % 50 == 0:
-        #     print(f"{data['symbol']}: {data['price']}")
-        #     print()
-
-        # Optional: print throughput every 5 seconds
-        if time.time() - start_time >= 5:
-            print(f"Consumed {message_count} messages in last 5 seconds")
-            message_count = 0
-            start_time = time.time()
-
+        
+        print(f"Received message from topic {msg.topic()}: {msg.value().decode('utf-8')}")
+except KeyboardInterrupt:
+    print("Consumer stopped by user") 
 finally:
     consumer.close()
