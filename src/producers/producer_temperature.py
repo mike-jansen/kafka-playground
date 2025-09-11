@@ -23,7 +23,6 @@ def generate_temperature():
 
     return round(current_value, 2)
 
-
 while True:
     value = json.dumps({'value': generate_temperature()})
     producer.produce(topic, value=value, callback=callback)
